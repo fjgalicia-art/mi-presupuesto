@@ -1,6 +1,6 @@
 // Caché para que la app funcione sin internet. Sube la versión al cambiar archivos.
 const PREFIX = 'mi-presupuesto-';
-const CACHE = `${PREFIX}v6`;
+const CACHE = `${PREFIX}v7`;
 const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'sync.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
 const FIREBASE_SDK = '/firebasejs/';
 
