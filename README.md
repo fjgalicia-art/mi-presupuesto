@@ -38,7 +38,7 @@ GitHub → **Settings → Pages → Deploy from a branch** → `main` / `(root)`
 
 ## Nube (opcional, Firebase)
 
-`sync.js` trae la configuración de Firebase vacía: así la app funciona solo en el teléfono y la sección de cuenta no aparece. Para activar el inicio de sesión con Google:
+`sync.js` está conectado al proyecto de Firebase `mi-presupuesto-e151a` (inicio de sesión con Google y respaldo en Firestore). Si la configuración se deja vacía, la app funciona solo en el teléfono y la sección de cuenta no aparece. Para usar otro proyecto:
 
 1. Crear un proyecto en Firebase, activar **Authentication → Google** y agregar el dominio de GitHub Pages en **Dominios autorizados**.
 2. Crear **Firestore** en modo producción con estas reglas:

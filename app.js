@@ -329,6 +329,29 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+/**
+ * Pregunta con una ventana de la app. Se usa en vez de confirm(), que algunos
+ * navegadores bloquean sin avisar. Resuelve true solo si se toca el botón de aceptar.
+ */
+function ask({ title, text, ok }) {
+  const dlg = $('#confirm-dialog');
+  $('#r-title').textContent = title;
+  $('#r-text').replaceChildren(...[].concat(text).filter(Boolean).map(t => el('p', {}, t)));
+  $('#r-ok').textContent = ok;
+  return new Promise(resolve => {
+    const done = answer => {
+      $('#r-ok').onclick = $('#r-cancel').onclick = dlg.onclose = null;
+      if (dlg.open) dlg.close();
+      resolve(answer);
+    };
+    $('#r-ok').onclick = () => done(true);
+    $('#r-cancel').onclick = () => done(false);
+    // Tecla Esc o gesto de cerrar. Si ya está abierta de nuevo, el aviso es de la pregunta anterior.
+    dlg.onclose = () => { if (!dlg.open) done(false); };
+    dlg.showModal();
+  });
+}
+
 /** Grupo de opciones donde solo una queda marcada. */
 function radioChips(container, options, selected, onPick) {
   container.replaceChildren(...options.map(o => el('button', {
@@ -408,6 +431,7 @@ const saveSettings = () => { save(); sync({ type: 'settings' }); };
 window.App = {
   get db() { return db; },
   toast,
+  ask,
   takePending() { const list = readPending(); writePending([]); return list; },
   setCloud(impl) { Object.assign(cloud, impl, { ready: true }); renderAccount(); },
   setCloudUnavailable() { cloud.unavailable = true; renderAccount(); },
@@ -906,8 +930,8 @@ $('#move-form').addEventListener('submit', ev => {
   render();
 });
 
-$('#m-delete').addEventListener('click', () => {
-  if (!confirm('¿Eliminar este movimiento?')) return;
+$('#m-delete').addEventListener('click', async () => {
+  if (!await ask({ title: '¿Eliminar este movimiento?', ok: 'Eliminar' })) return;
   db.movements = db.movements.filter(m => m.id !== mv.id);
   save();
   sync({ type: 'remove', id: mv.id });
@@ -962,8 +986,8 @@ $('#bill-form').addEventListener('submit', ev => {
   refreshAfterEdit();
 });
 
-$('#b-delete').addEventListener('click', () => {
-  if (!confirm('¿Eliminar este pago fijo?')) return;
+$('#b-delete').addEventListener('click', async () => {
+  if (!await ask({ title: '¿Eliminar este pago fijo?', ok: 'Eliminar' })) return;
   S().bills = S().bills.filter(b => b.id !== billEdit.id);
   saveSettings();
   $('#bill-dialog').close();
@@ -1022,13 +1046,13 @@ $('#card-form').addEventListener('submit', ev => {
   refreshAfterEdit();
 });
 
-$('#c-delete').addEventListener('click', () => {
+$('#c-delete').addEventListener('click', async () => {
   const card = cardById(cardEdit.id);
   const count = db.movements.filter(m => m.method === card.id).length;
-  const msg = count
-    ? `${card.name} tiene ${count} gasto${count === 1 ? '' : 's'}. Los gastos se quedan en tu historial como "Efectivo / débito". ¿Eliminar la tarjeta?`
-    : `¿Eliminar ${card.name}?`;
-  if (!confirm(msg)) return;
+  const text = count
+    ? `${card.name} tiene ${count} gasto${count === 1 ? '' : 's'}. Los gastos se quedan en tu historial como "Efectivo / débito".`
+    : null;
+  if (!await ask({ title: `¿Eliminar ${card.name}?`, text, ok: 'Eliminar' })) return;
   S().cards = S().cards.filter(c => c.id !== card.id);
   for (const m of db.movements.filter(x => x.method === card.id)) {
     m.method = 'efectivo';
@@ -1167,7 +1191,12 @@ $('#import-input').addEventListener('change', async ev => {
   if (!file) return;
   try {
     const data = normalize(JSON.parse(await file.text()));
-    if (!confirm(`El respaldo tiene ${data.movements.length} movimientos. Reemplazará los datos actuales. ¿Continuar?`)) return;
+    const ok = await ask({
+      title: '¿Restaurar respaldo?',
+      text: `El respaldo tiene ${data.movements.length} movimientos. Reemplazará los datos actuales.`,
+      ok: 'Restaurar',
+    });
+    if (!ok) return;
     db = data;
     save();
     sync({ type: 'all' });
@@ -1180,38 +1209,19 @@ $('#import-input').addEventListener('change', async ev => {
 
 /* ---------- Empezar desde cero ---------- */
 
-// Ventana propia en vez de confirm(): algunos navegadores bloquean esos avisos sin decir nada.
-let resetStage = 1;
-
-function renderResetStage() {
+$('#reset-btn').addEventListener('click', async () => {
   const signedIn = !!account;
-  const p = text => el('p', {}, text);
-  if (resetStage === 1) {
-    $('#r-title').textContent = '¿Empezar desde cero?';
-    $('#r-text').replaceChildren(...[
-      p(`Se borrarán todos tus gastos, ingresos, pagos fijos, tarjetas, ahorro y ajustes${signedIn ? ', en este teléfono y en tu cuenta' : ''}.`),
-      signedIn ? p('Tu cuenta de Google no se borra: seguirás con la sesión iniciada.') : null,
-      p('Si quieres guardar una copia, cancela y toca primero "Descargar respaldo".'),
-    ].filter(Boolean));
-    $('#r-ok').textContent = 'Sí, continuar';
-  } else {
-    $('#r-title').textContent = '¿De verdad quieres borrar todo?';
-    $('#r-text').replaceChildren(p('Esto no se puede deshacer.'));
-    $('#r-ok').textContent = 'Borrar todo';
-  }
-}
+  const first = await ask({
+    title: '¿Empezar desde cero?',
+    text: [
+      `Se borrarán todos tus gastos, ingresos, pagos fijos, tarjetas, ahorro y ajustes${signedIn ? ', en este teléfono y en tu cuenta' : ''}.`,
+      signedIn && 'Tu cuenta de Google no se borra: seguirás con la sesión iniciada.',
+      'Si quieres guardar una copia, cancela y toca primero "Descargar respaldo".',
+    ],
+    ok: 'Sí, continuar',
+  });
+  if (!first || !await ask({ title: '¿De verdad quieres borrar todo?', text: 'Esto no se puede deshacer.', ok: 'Borrar todo' })) return;
 
-$('#reset-btn').addEventListener('click', () => {
-  resetStage = 1;
-  renderResetStage();
-  $('#reset-dialog').showModal();
-});
-$('#r-cancel').addEventListener('click', () => $('#reset-dialog').close());
-
-$('#r-ok').addEventListener('click', () => {
-  if (resetStage === 1) { resetStage = 2; renderResetStage(); return; }
-  $('#reset-dialog').close();
-  const signedIn = !!account;
   db = normalize(null);
   save();
   writePending([]);

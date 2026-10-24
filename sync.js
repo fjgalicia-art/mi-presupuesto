@@ -9,12 +9,12 @@
 // Mientras esté vacía, la app funciona solo en el teléfono y oculta la sección de cuenta.
 
 const firebaseConfig = {
-  apiKey: '',
-  authDomain: '',
-  projectId: '',
-  storageBucket: '',
-  messagingSenderId: '',
-  appId: '',
+  apiKey: 'AIzaSyBAcgBEDTXGHTJrp1Mh_kii3krVxTWr7Fw',
+  authDomain: 'mi-presupuesto-e151a.firebaseapp.com',
+  projectId: 'mi-presupuesto-e151a',
+  storageBucket: 'mi-presupuesto-e151a.firebasestorage.app',
+  messagingSenderId: '1002858396254',
+  appId: '1:1002858396254:web:a1095a0f52aaac657e52cf',
 };
 
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0';
@@ -132,8 +132,11 @@ async function start() {
   }
 
   async function doSignOut() {
-    const ok = confirm('Tus datos quedan guardados en tu cuenta de Google. ' +
-      'En este teléfono se ocultarán hasta que vuelvas a iniciar sesión. ¿Cerrar sesión?');
+    const ok = await App.ask({
+      title: '¿Cerrar sesión?',
+      text: 'Tus datos quedan guardados en tu cuenta de Google. En este teléfono se ocultarán hasta que vuelvas a iniciar sesión.',
+      ok: 'Cerrar sesión',
+    });
     if (!ok) return;
     await signOut(auth);
     localStorage.removeItem(OWNER_KEY);
