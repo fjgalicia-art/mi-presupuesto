@@ -284,6 +284,19 @@
     </form>
   </dialog>
 
+  <!-- Empezar desde cero (dos pasos para confirmar) -->
+  <dialog id="reset-dialog" class="sheet">
+    <div class="form">
+      <h3 id="r-title"></h3>
+      <div id="r-text" class="muted"></div>
+      <div class="dialog-actions">
+        <span class="spacer"></span>
+        <button type="button" id="r-cancel">Cancelar</button>
+        <button type="button" id="r-ok" class="danger-solid"></button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Pago fijo -->
   <dialog id="bill-dialog" class="sheet">
     <form id="bill-form" class="form" method="dialog" autocomplete="off">
