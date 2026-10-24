@@ -116,6 +116,7 @@ button.primary { background: var(--accent); color: var(--on-accent); font-weight
 button.soft { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 button.ghost { background: transparent; color: var(--accent); font-weight: 600; border: 1.5px dashed var(--border); }
 button.danger { background: transparent; color: var(--bad); }
+button.danger-solid { background: var(--bad-soft); color: var(--bad); border: 1.5px solid var(--bad); font-weight: 600; }
 button.big { padding: 16px; font-size: 1.05rem; }
 button.link { background: none; color: var(--accent); padding: 0; }
 .file-btn { display: block; text-align: center; padding: 13px 16px; border-radius: 14px; background: var(--surface-2); cursor: pointer; }

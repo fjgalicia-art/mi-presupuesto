@@ -18,6 +18,7 @@ Asistente de presupuesto personal para **iPhone y Android** (se instala desde el
 - **Recordatorios**: pagos fijos por vencer o vencidos sin marcar, cortes y pagos de tarjetas, y día de pago.
 - **Movimientos**: historial por periodo, con filtro de gastos o ingresos, y navegación a periodos anteriores.
 - Funciona sin internet, se instala en la pantalla de inicio, respaldo `.json` y exportación a CSV.
+- **Empezar desde cero** (al final de Ajustes): borra todos los datos, también los de la nube si hay sesión, y vuelve a la bienvenida, con doble confirmación. La cuenta de Google no se borra.
 
 ## Instalar
 

@@ -421,7 +421,7 @@ window.App = {
     save();
     boot();
   },
-  resetLocal() { db = normalize(null); writePending([]); save(); boot(); },
+  resetLocal() { db = normalize(null); writePending([]); save(); restartWelcome(); boot(); },
 };
 
 /* =========================================================
@@ -432,6 +432,16 @@ const STEPS = 5;
 let step = 0;
 let wFreq = S().payFreq;
 let wType = S().incomeType;
+
+/** Vuelve la bienvenida al primer paso con los valores de inicio. */
+function restartWelcome() {
+  step = 0;
+  wFreq = S().payFreq;
+  wType = S().incomeType;
+  currentView = 'home';
+  mvPeriod = null;
+  cardDetail = null;
+}
 
 function showWelcome() {
   $('#app').hidden = true;
@@ -1166,6 +1176,27 @@ $('#import-input').addEventListener('change', async ev => {
   } catch (_) {
     toast('Archivo de respaldo inválido');
   }
+});
+
+/* ---------- Empezar desde cero ---------- */
+
+$('#reset-btn').addEventListener('click', () => {
+  const signedIn = !!account;
+  const first = 'Vas a empezar desde cero.\n\n' +
+    `Se borrarán todos tus gastos, ingresos, pagos fijos, tarjetas, ahorro y ajustes${signedIn ? ', en este teléfono y en tu cuenta' : ''}.\n\n` +
+    (signedIn ? 'Tu cuenta de Google NO se borra: seguirás con la sesión iniciada.\n\n' : '') +
+    'Si quieres guardar una copia, cancela y toca primero "Descargar respaldo".\n\n¿Continuar?';
+  if (!confirm(first)) return;
+  if (!confirm('¿Confirmas que quieres borrar todo y empezar desde cero? Esto no se puede deshacer.')) return;
+
+  db = normalize(null);
+  save();
+  writePending([]);
+  // Con sesión iniciada, la nube queda igual de vacía que este teléfono.
+  if (signedIn) sync({ type: 'all' });
+  restartWelcome();
+  boot();
+  toast('Listo. Empecemos de nuevo 🌱');
 });
 
 /* =========================================================
