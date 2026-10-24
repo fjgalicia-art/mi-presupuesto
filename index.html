@@ -24,7 +24,7 @@
       <div class="step" data-step="0">
         <div class="big-emoji">👋</div>
         <h1>¡Hola! Vamos a ordenar tu dinero</h1>
-        <p class="muted">Sin hojas de Excel ni cosas complicadas. Te haré unas preguntas rápidas y luego la app te dirá, cada día, cuánto puedes gastar.</p>
+        <p class="muted">Tu dinero siempre termina yendo a algún lado. Un presupuesto es decidir tú a dónde, antes de que el mes lo decida por ti. Empecemos con unas preguntas rápidas.</p>
         <label class="field">
           <span>¿Cómo te llamas?</span>
           <input id="w-name" type="text" autocomplete="given-name" placeholder="Tu nombre">
@@ -37,17 +37,24 @@
 
       <div class="step" data-step="1">
         <div class="big-emoji">💼</div>
-        <h1>Tu sueldo fijo</h1>
-        <p class="muted">El dinero que te llega siempre igual. Tus ingresos extra o variables los anotas cuando lleguen.</p>
+        <h1>Tus ingresos</h1>
         <div class="field">
-          <span>¿Cada cuánto te pagan?</span>
+          <span>¿Cómo te llega tu dinero?</span>
+          <div class="segmented" id="w-itype">
+            <button type="button" data-itype="fijo">Sueldo fijo</button>
+            <button type="button" data-itype="variable">Variable</button>
+          </div>
+        </div>
+        <p class="muted" id="w-itype-hint"></p>
+        <div class="field">
+          <span id="w-freq-label">¿Cada cuánto te pagan?</span>
           <div class="segmented" id="w-freq">
             <button type="button" data-freq="mensual">Una vez al mes</button>
             <button type="button" data-freq="quincenal">Cada quincena</button>
           </div>
         </div>
         <div class="two-cols" id="w-days"></div>
-        <label class="field">
+        <label class="field" id="w-income-field">
           <span id="w-income-label">¿Cuánto recibes cada vez?</span>
           <input id="w-income" type="text" inputmode="decimal" placeholder="Q0.00">
         </label>
@@ -65,7 +72,7 @@
       <div class="step" data-step="3">
         <div class="big-emoji">🐷</div>
         <h1>¿Cuánto quieres ahorrar?</h1>
-        <p class="muted">Lo que apartas apenas te pagan, antes de gastar. Aunque sea poquito, ya cuenta. Puedes dejarlo en cero y cambiarlo después.</p>
+        <p class="muted">Lo que apartas apenas recibes dinero, antes de gastar. Aunque sea poquito, ya cuenta. Puedes dejarlo en cero y cambiarlo después.</p>
         <label class="field">
           <span id="w-savings-label">Ahorro cada vez que te pagan</span>
           <input id="w-savings" type="text" inputmode="decimal" placeholder="Q0.00">
@@ -174,19 +181,26 @@
             <input id="s-name" type="text">
           </label>
           <div class="field">
-            <span>¿Cada cuánto te pagan?</span>
+            <span>¿Cómo te llega tu dinero?</span>
+            <div class="segmented" id="s-itype">
+              <button type="button" data-itype="fijo">Sueldo fijo</button>
+              <button type="button" data-itype="variable">Variable</button>
+            </div>
+          </div>
+          <div class="field">
+            <span id="s-freq-label">¿Cada cuánto te pagan?</span>
             <div class="segmented" id="s-freq">
               <button type="button" data-freq="mensual">Una vez al mes</button>
               <button type="button" data-freq="quincenal">Cada quincena</button>
             </div>
           </div>
           <div class="two-cols" id="s-days"></div>
-          <label class="field">
+          <label class="field" id="s-income-field">
             <span>Sueldo fijo cada vez que te pagan (Q)</span>
             <input id="s-income" type="text" inputmode="decimal">
           </label>
           <label class="field">
-            <span>Ahorro cada vez que te pagan (Q)</span>
+            <span id="s-savings-label">Ahorro cada vez que te pagan (Q)</span>
             <input id="s-savings" type="text" inputmode="decimal">
           </label>
           <label class="field">
@@ -217,6 +231,12 @@
             <input id="import-input" type="file" accept="application/json,.json" hidden>
           </label>
           <button type="button" id="export-csv-btn">Exportar a CSV (Excel)</button>
+        </div>
+
+        <div class="card form">
+          <h3>Empezar desde cero</h3>
+          <p class="muted small">Borra tus gastos, ingresos, pagos fijos, tarjetas y ajustes, y te lleva a la bienvenida. Tu cuenta de Google no se borra.</p>
+          <button type="button" class="danger-solid" id="reset-btn">Empezar desde cero</button>
         </div>
       </section>
     </main>
