@@ -1,5 +1,5 @@
 // Caché para que la app funcione sin internet. Sube la versión al cambiar archivos.
-const CACHE = 'mi-presupuesto-v3';
+const CACHE = 'mi-presupuesto-v4';
 const FILES = ['./', 'index.html', 'styles.css', 'app.js', 'sync.js', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-512.png'];
 const FIREBASE_SDK = '/firebasejs/';
 
@@ -33,8 +33,9 @@ self.addEventListener('fetch', e => {
   if (url.origin !== self.location.origin) return;
 
   // Archivos de la app: red primero (para recibir actualizaciones), caché si no hay conexión.
+  // `no-cache` pregunta siempre al servidor, para no mezclar archivos nuevos con viejos.
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));

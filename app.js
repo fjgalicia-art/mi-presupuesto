@@ -1180,15 +1180,38 @@ $('#import-input').addEventListener('change', async ev => {
 
 /* ---------- Empezar desde cero ---------- */
 
-$('#reset-btn').addEventListener('click', () => {
-  const signedIn = !!account;
-  const first = 'Vas a empezar desde cero.\n\n' +
-    `Se borrarán todos tus gastos, ingresos, pagos fijos, tarjetas, ahorro y ajustes${signedIn ? ', en este teléfono y en tu cuenta' : ''}.\n\n` +
-    (signedIn ? 'Tu cuenta de Google NO se borra: seguirás con la sesión iniciada.\n\n' : '') +
-    'Si quieres guardar una copia, cancela y toca primero "Descargar respaldo".\n\n¿Continuar?';
-  if (!confirm(first)) return;
-  if (!confirm('¿Confirmas que quieres borrar todo y empezar desde cero? Esto no se puede deshacer.')) return;
+// Ventana propia en vez de confirm(): algunos navegadores bloquean esos avisos sin decir nada.
+let resetStage = 1;
 
+function renderResetStage() {
+  const signedIn = !!account;
+  const p = text => el('p', {}, text);
+  if (resetStage === 1) {
+    $('#r-title').textContent = '¿Empezar desde cero?';
+    $('#r-text').replaceChildren(...[
+      p(`Se borrarán todos tus gastos, ingresos, pagos fijos, tarjetas, ahorro y ajustes${signedIn ? ', en este teléfono y en tu cuenta' : ''}.`),
+      signedIn ? p('Tu cuenta de Google no se borra: seguirás con la sesión iniciada.') : null,
+      p('Si quieres guardar una copia, cancela y toca primero "Descargar respaldo".'),
+    ].filter(Boolean));
+    $('#r-ok').textContent = 'Sí, continuar';
+  } else {
+    $('#r-title').textContent = '¿De verdad quieres borrar todo?';
+    $('#r-text').replaceChildren(p('Esto no se puede deshacer.'));
+    $('#r-ok').textContent = 'Borrar todo';
+  }
+}
+
+$('#reset-btn').addEventListener('click', () => {
+  resetStage = 1;
+  renderResetStage();
+  $('#reset-dialog').showModal();
+});
+$('#r-cancel').addEventListener('click', () => $('#reset-dialog').close());
+
+$('#r-ok').addEventListener('click', () => {
+  if (resetStage === 1) { resetStage = 2; renderResetStage(); return; }
+  $('#reset-dialog').close();
+  const signedIn = !!account;
   db = normalize(null);
   save();
   writePending([]);
