@@ -1,6 +1,6 @@
 # Mi Presupuesto
 
-Asistente de presupuesto personal, pensado para iPhone (funciona en cualquier teléfono). Responde una sola pregunta, sin hojas de Excel: **¿cuánto puedo gastar hoy?**
+Asistente de presupuesto personal para **iPhone y Android** (se instala desde el navegador, sin tiendas de apps). Responde una sola pregunta, sin hojas de Excel: **¿cuánto puedo gastar hoy?**
 
 ## Qué hace
 
@@ -18,11 +18,17 @@ Asistente de presupuesto personal, pensado para iPhone (funciona en cualquier te
 - **Movimientos**: historial por periodo, con filtro de gastos o ingresos, y navegación a periodos anteriores.
 - Funciona sin internet, se instala en la pantalla de inicio, respaldo `.json` y exportación a CSV.
 
-## Instalar en iPhone
+## Instalar
 
+**iPhone**
 1. Abrir el enlace de la app en **Safari**.
 2. Botón **Compartir** (cuadro con flecha hacia arriba) → **Agregar a pantalla de inicio** → **Agregar**.
-3. Abrirla siempre desde el ícono.
+
+**Android**
+1. Abrir el enlace de la app en **Chrome**.
+2. Menú **⋮** → **Instalar app** (o **Agregar a la pantalla principal**).
+
+Después, abrirla siempre desde el ícono.
 
 ## Publicar
 
@@ -55,7 +61,7 @@ Estructura: `users/{uid}` (ajustes) y `users/{uid}/movements/{id}` (gastos e ing
 | Archivo | Descripción |
 | --- | --- |
 | `index.html` | Pantallas: bienvenida, inicio, movimientos, tarjetas, ajustes y hojas de edición |
-| `styles.css` | Estilos (modo claro/oscuro, pensado para iPhone) |
+| `styles.css` | Estilos (modo claro/oscuro, adaptados a iPhone y Android) |
 | `app.js` | Lógica: periodos de pago, presupuesto, consejos, recordatorios, tarjetas, almacenamiento |
 | `sync.js` | Inicio de sesión con Google y sincronización con Firebase |
 | `sw.js`, `manifest.webmanifest`, `icon*` | Instalación como app y uso sin conexión |
