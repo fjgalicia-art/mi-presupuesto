@@ -4,14 +4,15 @@ Asistente de presupuesto personal para **iPhone y Android** (se instala desde el
 
 ## Qué hace
 
-- **Bienvenida guiada**: nombre, sueldo fijo (mensual o quincenal y sus días de pago), pagos fijos, meta de ahorro y tarjetas. Todo se puede cambiar después en Ajustes.
+- **Bienvenida guiada**: nombre, tipo de ingreso (sueldo fijo o variable), cada cuánto (mensual o quincenal y sus días), pagos fijos, meta de ahorro y tarjetas. Todo se puede cambiar después en Ajustes.
 - **Inicio**: anillo de colores y un mensaje amable ("Vas muy bien", "Vas un poquito rápido", "Te pasaste") con **cuánto te queda** y **cuánto puedes gastar al día** hasta tu próximo pago.
-  - Te queda = sueldo fijo + ingresos extra anotados − pagos fijos del periodo − ahorro − gastos.
-  - Los ingresos variables solo cuentan cuando se anotan, para no gastar dinero que aún no llega.
+  - **Sueldo fijo**: te queda = sueldo fijo + ingresos extra anotados − pagos fijos del periodo − ahorro − gastos.
+  - **Ingreso variable**: te queda = ingresos anotados en el periodo − pagos fijos − ahorro − gastos, y avisa cuánto falta para cubrir los pagos fijos y el ahorro.
+  - Los ingresos extra o variables solo cuentan cuando se anotan, para no gastar dinero que aún no llega.
   - Consejo del día: hasta qué fecha te alcanza a este ritmo, cuánto te sobraría o qué categoría pesa más.
   - Lista de pagos fijos del periodo para marcar ✓ cuando se pagan.
   - "¿En qué se va?": barras por categoría.
-- **Periodos automáticos** según los días de pago: cada periodo va del día que te pagan al día anterior al siguiente pago (31 = último día del mes).
+- **Periodos automáticos** según los días de pago (o, con ingreso variable, los días que eliges para empezar cada periodo): cada periodo va de ese día al día anterior al siguiente (31 = último día del mes).
 - **Gastos e ingresos**: monto en Q (toca la Q para cambiar a $), descripción con autocompletado, categoría con emoji y forma de pago (efectivo/débito o una tarjeta).
 - **Tarjetas de crédito** con día de corte y de pago propios: total por ciclo y recordatorio 3 días antes del corte y del pago.
 - **Recordatorios**: pagos fijos por vencer o vencidos sin marcar, cortes y pagos de tarjetas, y día de pago.

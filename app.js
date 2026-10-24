@@ -31,6 +31,7 @@ const CARD_COLORS = ['#c2507a', '#4a90d9', '#3d9970', '#e07a5f', '#7d5bc6', '#c9
 const DEFAULT_SETTINGS = {
   name: '',
   onboarded: false,
+  incomeType: 'fijo',        // 'fijo' (sueldo que llega igual) | 'variable' (solo cuenta lo anotado)
   payFreq: 'quincenal',      // 'mensual' | 'quincenal'
   payDays: [15, 31],         // 31 = último día del mes
   fixedIncome: 0,            // por cada pago
@@ -72,6 +73,7 @@ function normalize(data) {
     settings: {
       name: String(s.name || ''),
       onboarded: !!s.onboarded,
+      incomeType: s.incomeType === 'variable' ? 'variable' : 'fijo',
       payFreq,
       payDays: payFreq === 'mensual' ? [days[0] || 1] : [days[0] || 15, days[1] || 31],
       fixedIncome: money(s.fixedIncome),
@@ -155,6 +157,7 @@ function periodFor(date) {
 const periodByKey = key => periodFor(parseYmd(key));
 const shiftPeriod = (p, n) => (n > 0 ? periodFor(p.next) : periodFor(addDays(p.start, -1)));
 const currentPeriod = () => periodFor(parseYmd(todayStr()));
+const isVariable = () => S().incomeType === 'variable';
 
 function periodLabel(p) {
   const sameMonth = p.start.getMonth() === p.end.getMonth();
@@ -188,7 +191,7 @@ function budgetFor(p) {
     .sort((a, b) => a.due - b.due);
   const billsTotal = bills.reduce((s, b) => s + b.amount, 0);
   const spent = gastos.reduce((s, m) => s + inQ(m), 0);
-  const income = S().fixedIncome + extra;
+  const income = (isVariable() ? 0 : S().fixedIncome) + extra;
   const base = income - billsTotal - S().savings;       // lo que se puede gastar en el periodo
   const left = base - spent;
 
@@ -203,7 +206,7 @@ function budgetFor(p) {
 
 /** Estado de ánimo según el ritmo: ¿vas gastando más rápido de lo que pasan los días? */
 function moodOf(b) {
-  if (b.base <= 0 && b.spent === 0) return { key: 'warn', emoji: '🤔', text: 'Falta tu ingreso' };
+  if (b.base <= 0 && b.spent === 0) return { key: 'warn', emoji: '🤔', text: isVariable() ? 'Anota tus ingresos' : 'Falta tu ingreso' };
   if (b.left < 0) return { key: 'bad', emoji: '😬', text: 'Te pasaste del presupuesto' };
   const spentRatio = b.base > 0 ? b.spent / b.base : 1;
   const timeRatio = b.totalDays ? b.elapsed / b.totalDays : 1;
@@ -215,8 +218,18 @@ function moodOf(b) {
 /** Un consejo corto y útil, nunca regañón. */
 function tipFor(b) {
   if (!b.isCurrent) return null;
-  if (b.base <= 0) return '💡 Agrega tu sueldo fijo en Ajustes para saber cuánto puedes gastar.';
-  if (b.left < 0) return `💡 Para no pasarte más, intenta gastar solo lo necesario hasta el ${fmtDay(b.p.next)}, que es tu próximo pago.`;
+  if (b.base <= 0) {
+    if (!isVariable()) return '💡 Agrega tu sueldo fijo en Ajustes para saber cuánto puedes gastar.';
+    if (b.base < 0) {
+      const need = `${fmtQ(-b.base)} de ingresos para cubrir tus pagos fijos y tu ahorro de este periodo`;
+      return b.extra > 0 ? `💡 Te faltan ${need}.` : `💡 Anota tus ingresos con ＋ Ingreso cuando lleguen. Necesitas ${need}.`;
+    }
+    return '💡 Cuando recibas dinero, anótalo con ＋ Ingreso y te diré cuánto puedes gastar.';
+  }
+  if (b.left < 0) {
+    const next = isVariable() ? 'cuando empieza tu siguiente periodo' : 'que es tu próximo pago';
+    return `💡 Para no pasarte más, intenta gastar solo lo necesario hasta el ${fmtDay(b.p.next)}, ${next}.`;
+  }
   if (b.elapsed >= 3 && b.spent > 0) {
     const perDay = b.spent / b.elapsed;
     const lastsDays = Math.floor(b.left / perDay);
@@ -337,15 +350,29 @@ function segmented(container, attr, value, onPick) {
   });
 }
 
-/** Campos de "día de pago" (uno o dos, según la frecuencia). */
-function renderPayDayInputs(container, freq, days) {
+/**
+ * Campos de "día de pago" (uno o dos, según la frecuencia). Con ingreso
+ * variable son los días en que empieza cada periodo del presupuesto.
+ */
+function renderPayDayInputs(container, freq, days, type) {
+  const variable = type === 'variable';
   const make = (label, value, i) => el('label', { class: 'field' }, el('span', {}, label),
     el('input', { type: 'number', min: 1, max: 31, inputmode: 'numeric', value, 'data-payday': i }));
   container.replaceChildren(...(freq === 'mensual'
-    ? [make('Día en que te pagan', days[0] || 1, 0)]
-    : [make('Primer pago (día)', days[0] || 15, 0), make('Segundo pago (día)', days[1] || 31, 1)]));
-  if (freq !== 'mensual') container.append(el('p', { class: 'hint', style: 'grid-column:1/-1' }, 'Si te pagan el último día del mes, pon 31.'));
+    ? [make(variable ? 'Día en que empieza tu mes' : 'Día en que te pagan', days[0] || 1, 0)]
+    : [make(variable ? 'Primer periodo (día)' : 'Primer pago (día)', days[0] || 15, 0),
+      make(variable ? 'Segundo periodo (día)' : 'Segundo pago (día)', days[1] || 31, 1)]));
+  if (freq !== 'mensual') {
+    container.append(el('p', { class: 'hint', style: 'grid-column:1/-1' },
+      variable ? 'Para el último día del mes, pon 31.' : 'Si te pagan el último día del mes, pon 31.'));
+  }
 }
+
+const FREQ_LABEL = { fijo: '¿Cada cuánto te pagan?', variable: '¿Cada cuánto quieres revisar tu presupuesto?' };
+const ITYPE_HINT = {
+  fijo: 'Te llega lo mismo cada vez. Si a veces recibes extras (bonos, comisiones, ventas), los anotas cuando lleguen.',
+  variable: 'Cambia de un mes a otro (ventas, comisiones, trabajos por tu cuenta). Anotas cada ingreso cuando llega y la app calcula solo con lo que ya tienes.',
+};
 
 const readPayDays = container => [...container.querySelectorAll('[data-payday]')]
   .map(i => clampInt(i.value, 1, 31, null)).filter(Boolean).sort((a, b) => a - b);
@@ -404,6 +431,7 @@ window.App = {
 const STEPS = 5;
 let step = 0;
 let wFreq = S().payFreq;
+let wType = S().incomeType;
 
 function showWelcome() {
   $('#app').hidden = true;
@@ -411,20 +439,29 @@ function showWelcome() {
   $('#w-name').value = S().name;
   $('#w-income').value = S().fixedIncome || '';
   $('#w-savings').value = S().savings || '';
-  segmented($('#w-freq'), 'freq', wFreq, f => { wFreq = f; renderPayDayInputs($('#w-days'), f, S().payDays); updateWelcomeLabels(); });
-  renderPayDayInputs($('#w-days'), wFreq, S().payDays);
+  segmented($('#w-freq'), 'freq', wFreq, f => { wFreq = f; renderPayDayInputs($('#w-days'), f, S().payDays, wType); updateWelcomeLabels(); });
+  segmented($('#w-itype'), 'itype', wType, t => {
+    wType = t;
+    renderPayDayInputs($('#w-days'), wFreq, readPayDays($('#w-days')), t);
+    updateWelcomeLabels();
+  });
+  renderPayDayInputs($('#w-days'), wFreq, S().payDays, wType);
   updateWelcomeLabels();
   renderStep();
 }
 
 function updateWelcomeLabels() {
   const each = wFreq === 'mensual' ? 'cada mes' : 'cada quincena';
+  const variable = wType === 'variable';
+  $('#w-itype-hint').textContent = ITYPE_HINT[wType];
+  $('#w-freq-label').textContent = FREQ_LABEL[wType];
+  $('#w-income-field').hidden = variable;
   $('#w-income-label').textContent = `¿Cuánto recibes ${each}?`;
   $('#w-savings-label').textContent = `Ahorro ${each}`;
   const income = parseAmount($('#w-income').value);
-  $('#w-savings-hint').textContent = income > 0
-    ? `Una buena meta es el 10%: unos ${fmtQ(Math.round(income * 0.1))} ${each}.`
-    : '';
+  $('#w-savings-hint').textContent = variable
+    ? 'Una buena meta es apartar el 10% de lo que recibas.'
+    : income > 0 ? `Una buena meta es el 10%: unos ${fmtQ(Math.round(income * 0.1))} ${each}.` : '';
 }
 
 function renderStep() {
@@ -457,17 +494,18 @@ $('#w-next').addEventListener('click', () => {
     S().name = name;
   }
   if (step === 1) {
-    const income = parseAmount($('#w-income').value);
+    const variable = wType === 'variable';
+    const income = variable ? S().fixedIncome : parseAmount($('#w-income').value);
     const days = readPayDays($('#w-days'));
-    if (isNaN(income) || income <= 0) { toast('Escribe cuánto recibes'); $('#w-income').focus(); return; }
-    if (days.length !== (wFreq === 'mensual' ? 1 : 2) || new Set(days).size !== days.length) { toast('Revisa los días de pago'); return; }
-    Object.assign(S(), { payFreq: wFreq, payDays: days, fixedIncome: income });
+    if (!variable && (isNaN(income) || income <= 0)) { toast('Escribe cuánto recibes'); $('#w-income').focus(); return; }
+    if (days.length !== (wFreq === 'mensual' ? 1 : 2) || new Set(days).size !== days.length) { toast(variable ? 'Revisa los días' : 'Revisa los días de pago'); return; }
+    Object.assign(S(), { incomeType: wType, payFreq: wFreq, payDays: days, fixedIncome: income });
   }
   if (step === 3) {
     const raw = $('#w-savings').value.trim();
     const savings = raw ? parseAmount(raw) : 0;
     if (isNaN(savings) || savings < 0) { toast('Revisa el monto de ahorro'); return; }
-    if (savings >= S().fixedIncome) { toast('El ahorro no puede ser todo tu sueldo 😉'); return; }
+    if (!isVariable() && savings >= S().fixedIncome) { toast('El ahorro no puede ser todo tu sueldo 😉'); return; }
     S().savings = savings;
   }
   if (step < STEPS - 1) {
@@ -537,9 +575,10 @@ function renderHome() {
   const remainingRatio = b.base > 0 ? Math.max(0, Math.min(1, b.left / b.base)) : 0;
   $('#ring-fg').style.strokeDasharray = RING;
   $('#ring-fg').style.strokeDashoffset = RING * (1 - remainingRatio);
+  const days = `${b.daysLeft} día${b.daysLeft === 1 ? '' : 's'}`;
   $('#hero-sub').textContent = b.left > 0
-    ? `≈ ${fmtQ(b.left / b.daysLeft)} al día · ${b.daysLeft} día${b.daysLeft === 1 ? '' : 's'} para tu próximo pago`
-    : `Tu próximo pago es el ${fmtWeekday(b.p.next)}`;
+    ? `≈ ${fmtQ(b.left / b.daysLeft)} al día · ${days} ${isVariable() ? 'para cerrar el periodo' : 'para tu próximo pago'}`
+    : isVariable() ? `Este periodo termina el ${fmtWeekday(b.p.end)}` : `Tu próximo pago es el ${fmtWeekday(b.p.next)}`;
 
   const tip = tipFor(b);
   $('#tip').hidden = !tip;
@@ -553,14 +592,18 @@ function renderHome() {
 
 function renderBreakdown(b) {
   const row = (cls, label, value) => el('div', { class: `row ${cls}` }, el('span', {}, label), el('span', {}, value));
-  $('#breakdown').replaceChildren(
-    row('plus', '💼 Sueldo fijo', `+ ${fmtQ(S().fixedIncome)}`),
-    b.extra ? row('plus', '✨ Ingresos extra', `+ ${fmtQ(b.extra)}`) : null,
+  const variable = isVariable();
+  $('#breakdown').replaceChildren(...[
+    variable ? row('plus', '💰 Ingresos anotados', `+ ${fmtQ(b.extra)}`) : row('plus', '💼 Sueldo fijo', `+ ${fmtQ(S().fixedIncome)}`),
+    !variable && b.extra ? row('plus', '✨ Ingresos extra', `+ ${fmtQ(b.extra)}`) : null,
     b.billsTotal ? row('minus', '🧾 Pagos fijos', `− ${fmtQ(b.billsTotal)}`) : null,
     S().savings ? row('minus', '🐷 Tu ahorro', `− ${fmtQ(S().savings)}`) : null,
     row('minus', '🛍️ Lo que has gastado', `− ${fmtQ(b.spent)}`),
     row('total', 'Te queda', fmtQ(b.left)),
-    el('p', { class: 'note' }, 'Tus ingresos extra solo cuentan cuando los anotas: así nunca gastas dinero que todavía no tienes.'));
+    el('p', { class: 'note' }, variable
+      ? 'Solo cuenta lo que ya recibiste y anotaste: así nunca gastas dinero que todavía no llega.'
+      : 'Tus ingresos extra solo cuentan cuando los anotas: así nunca gastas dinero que todavía no tienes.'),
+  ].filter(Boolean));
 }
 
 function renderBills(b) {
@@ -609,7 +652,11 @@ function renderReminders(b) {
   const when = (diff, date) => (diff === 0 ? 'Hoy' : diff === 1 ? 'Mañana' : `El ${fmtWeekday(date)}`);
 
   const payDiff = daysBetween(today, b.p.next);
-  if (payDiff <= 1) notes.push({ diff: payDiff, happy: true, text: `🎉 ${when(payDiff, b.p.next)} es día de pago. ¡Empieza un periodo nuevo!` });
+  if (payDiff <= 1) {
+    notes.push({ diff: payDiff, happy: true, text: isVariable()
+      ? `🗓️ ${when(payDiff, b.p.next)} empieza un periodo nuevo.`
+      : `🎉 ${when(payDiff, b.p.next)} es día de pago. ¡Empieza un periodo nuevo!` });
+  }
 
   for (const bill of b.bills) {
     const diff = daysBetween(today, bill.due);
@@ -995,32 +1042,47 @@ function refreshAfterEdit() {
    ========================================================= */
 
 let sFreq = null;
+let sType = null;
+
+function updateSettingsLabels() {
+  $('#s-freq-label').textContent = FREQ_LABEL[sType];
+  $('#s-income-field').hidden = sType === 'variable';
+  $('#s-savings-label').textContent = sType === 'variable' ? 'Ahorro por periodo (Q)' : 'Ahorro cada vez que te pagan (Q)';
+}
 
 function renderSettings() {
   sFreq = S().payFreq;
+  sType = S().incomeType;
   $('#s-name').value = S().name;
   $('#s-income').value = S().fixedIncome || '';
   $('#s-savings').value = S().savings || '';
   $('#s-rate').value = S().rate;
-  segmented($('#s-freq'), 'freq', sFreq, f => { sFreq = f; renderPayDayInputs($('#s-days'), f, S().payDays); });
-  renderPayDayInputs($('#s-days'), sFreq, S().payDays);
+  segmented($('#s-freq'), 'freq', sFreq, f => { sFreq = f; renderPayDayInputs($('#s-days'), f, S().payDays, sType); });
+  segmented($('#s-itype'), 'itype', sType, t => {
+    sType = t;
+    renderPayDayInputs($('#s-days'), sFreq, readPayDays($('#s-days')), t);
+    updateSettingsLabels();
+  });
+  renderPayDayInputs($('#s-days'), sFreq, S().payDays, sType);
+  updateSettingsLabels();
   renderBillList($('#s-bills'));
   renderCardList($('#s-cards'));
 }
 
 $('#s-save').addEventListener('click', () => {
   const name = $('#s-name').value.trim();
-  const income = parseAmount($('#s-income').value);
+  const variable = sType === 'variable';
+  const income = variable ? S().fixedIncome : parseAmount($('#s-income').value);
   const savingsRaw = $('#s-savings').value.trim();
   const savings = savingsRaw ? parseAmount(savingsRaw) : 0;
   const rate = parseAmount($('#s-rate').value);
   const days = readPayDays($('#s-days'));
   if (!name) { toast('Escribe tu nombre'); return; }
-  if (isNaN(income) || income <= 0) { toast('Revisa tu sueldo fijo'); return; }
-  if (isNaN(savings) || savings < 0 || savings >= income) { toast('Revisa el ahorro'); return; }
+  if (!variable && (isNaN(income) || income <= 0)) { toast('Revisa tu sueldo fijo'); return; }
+  if (isNaN(savings) || savings < 0 || (!variable && savings >= income)) { toast('Revisa el ahorro'); return; }
   if (isNaN(rate) || rate <= 0) { toast('Revisa el tipo de cambio'); return; }
   if (days.length !== (sFreq === 'mensual' ? 1 : 2) || new Set(days).size !== days.length) { toast('Revisa los días de pago'); return; }
-  Object.assign(S(), { name, fixedIncome: income, savings, rate, payFreq: sFreq, payDays: days });
+  Object.assign(S(), { name, incomeType: sType, fixedIncome: income, savings, rate, payFreq: sFreq, payDays: days });
   mvPeriod = null;
   saveSettings();
   toast('Guardado ✓');
