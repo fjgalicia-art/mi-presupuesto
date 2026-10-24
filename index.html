@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f3ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16131a" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Mi Presupuesto">
+  <title>Mi Presupuesto</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ============ BIENVENIDA (primera vez) ============ -->
+  <section id="welcome" class="welcome" hidden>
+    <div class="welcome-inner">
+      <div class="steps-dots" id="steps-dots"></div>
+
+      <div class="step" data-step="0">
+        <div class="big-emoji">👋</div>
+        <h1>¡Hola! Vamos a ordenar tu dinero</h1>
+        <p class="muted">Sin hojas de Excel ni cosas complicadas. Te haré unas preguntas rápidas y luego la app te dirá, cada día, cuánto puedes gastar.</p>
+        <label class="field">
+          <span>¿Cómo te llamas?</span>
+          <input id="w-name" type="text" autocomplete="given-name" placeholder="Tu nombre">
+        </label>
+        <p id="w-signin" class="muted small" hidden>
+          ¿Ya usabas la app en otro teléfono?
+          <button type="button" class="link" id="w-signin-btn">Inicia sesión con Google</button>
+        </p>
+      </div>
+
+      <div class="step" data-step="1">
+        <div class="big-emoji">💼</div>
+        <h1>Tu sueldo fijo</h1>
+        <p class="muted">El dinero que te llega siempre igual. Tus ingresos extra o variables los anotas cuando lleguen.</p>
+        <div class="field">
+          <span>¿Cada cuánto te pagan?</span>
+          <div class="segmented" id="w-freq">
+            <button type="button" data-freq="mensual">Una vez al mes</button>
+            <button type="button" data-freq="quincenal">Cada quincena</button>
+          </div>
+        </div>
+        <div class="two-cols" id="w-days"></div>
+        <label class="field">
+          <span id="w-income-label">¿Cuánto recibes cada vez?</span>
+          <input id="w-income" type="text" inputmode="decimal" placeholder="Q0.00">
+        </label>
+      </div>
+
+      <div class="step" data-step="2">
+        <div class="big-emoji">🧾</div>
+        <h1>Tus pagos fijos</h1>
+        <p class="muted">Lo que pagas cada mes sí o sí: alquiler, teléfono, internet, Netflix… La app los aparta para que no te tomen por sorpresa.</p>
+        <ul class="simple-list" id="w-bills"></ul>
+        <div class="chips" id="w-bill-suggestions"></div>
+        <button type="button" class="ghost" data-add="bill">＋ Otro pago fijo</button>
+      </div>
+
+      <div class="step" data-step="3">
+        <div class="big-emoji">🐷</div>
+        <h1>¿Cuánto quieres ahorrar?</h1>
+        <p class="muted">Lo que apartas apenas te pagan, antes de gastar. Aunque sea poquito, ya cuenta. Puedes dejarlo en cero y cambiarlo después.</p>
+        <label class="field">
+          <span id="w-savings-label">Ahorro cada vez que te pagan</span>
+          <input id="w-savings" type="text" inputmode="decimal" placeholder="Q0.00">
+        </label>
+        <p class="hint" id="w-savings-hint"></p>
+      </div>
+
+      <div class="step" data-step="4">
+        <div class="big-emoji">💳</div>
+        <h1>¿Usas tarjetas de crédito?</h1>
+        <p class="muted">Agrégalas con su día de corte y de pago, y te avisaré 3 días antes de cada uno. Si no usas, sigue sin agregar nada.</p>
+        <ul class="simple-list" id="w-cards"></ul>
+        <button type="button" class="ghost" data-add="card">＋ Agregar tarjeta</button>
+      </div>
+
+      <div class="welcome-actions">
+        <button type="button" id="w-back" class="ghost">Atrás</button>
+        <button type="button" id="w-next" class="primary">Siguiente</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <div id="app" hidden>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="period-label"></p>
+        <h1 id="view-title">Hola</h1>
+      </div>
+      <button type="button" id="sync-pill" class="sync-pill" data-goto="settings" hidden></button>
+    </header>
+
+    <main>
+      <!-- INICIO -->
+      <section id="view-home" class="view active">
+        <div id="reminders" class="reminders"></div>
+
+        <div class="card hero" id="hero">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 120 120" class="ring" aria-hidden="true">
+              <circle cx="60" cy="60" r="52" class="ring-bg"/>
+              <circle cx="60" cy="60" r="52" class="ring-fg" id="ring-fg"/>
+            </svg>
+            <div class="ring-center">
+              <span class="mood" id="mood-emoji">🙂</span>
+            </div>
+          </div>
+          <div class="hero-text">
+            <p class="mood-text" id="mood-text"></p>
+            <p class="hero-label">Te quedan para gastar</p>
+            <p class="hero-amount" id="hero-amount">Q0.00</p>
+            <p class="hero-sub" id="hero-sub"></p>
+          </div>
+        </div>
+
+        <p class="tip" id="tip" hidden></p>
+
+        <div class="quick-actions">
+          <button type="button" class="primary big" data-new="gasto">＋ Gasto</button>
+          <button type="button" class="soft big" data-new="ingreso">＋ Ingreso</button>
+        </div>
+
+        <h2 class="section-title">Cómo va tu dinero</h2>
+        <div class="card breakdown" id="breakdown"></div>
+
+        <h2 class="section-title" id="bills-title">Pagos fijos de este periodo</h2>
+        <ul class="checklist" id="bills-list"></ul>
+
+        <h2 class="section-title">¿En qué se va?</h2>
+        <div class="card" id="categories"></div>
+      </section>
+
+      <!-- MOVIMIENTOS -->
+      <section id="view-moves" class="view">
+        <div class="card period-nav">
+          <button type="button" class="icon-btn" id="mv-prev" aria-label="Periodo anterior">‹</button>
+          <div class="period-info">
+            <strong id="mv-period"></strong>
+            <span class="muted small" id="mv-summary"></span>
+          </div>
+          <button type="button" class="icon-btn" id="mv-next" aria-label="Periodo siguiente">›</button>
+        </div>
+        <div class="segmented filter" id="mv-filter">
+          <button type="button" data-filter="all" aria-pressed="true">Todo</button>
+          <button type="button" data-filter="gasto">Gastos</button>
+          <button type="button" data-filter="ingreso">Ingresos</button>
+        </div>
+        <div id="mv-list"></div>
+      </section>
+
+      <!-- TARJETAS -->
+      <section id="view-cards" class="view">
+        <p class="muted small">Lo que llevas en el ciclo actual de cada tarjeta. Toca una para ver sus compras.</p>
+        <div id="cards-summary"></div>
+        <div id="card-detail" hidden></div>
+      </section>
+
+      <!-- AJUSTES -->
+      <section id="view-settings" class="view">
+        <div id="account" class="card form account"></div>
+
+        <div class="card form">
+          <h3>Mi dinero</h3>
+          <label class="field">
+            <span>Tu nombre</span>
+            <input id="s-name" type="text">
+          </label>
+          <div class="field">
+            <span>¿Cada cuánto te pagan?</span>
+            <div class="segmented" id="s-freq">
+              <button type="button" data-freq="mensual">Una vez al mes</button>
+              <button type="button" data-freq="quincenal">Cada quincena</button>
+            </div>
+          </div>
+          <div class="two-cols" id="s-days"></div>
+          <label class="field">
+            <span>Sueldo fijo cada vez que te pagan (Q)</span>
+            <input id="s-income" type="text" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>Ahorro cada vez que te pagan (Q)</span>
+            <input id="s-savings" type="text" inputmode="decimal">
+          </label>
+          <label class="field">
+            <span>Tipo de cambio (Q por $1)</span>
+            <input id="s-rate" type="text" inputmode="decimal">
+          </label>
+          <button type="button" class="primary" id="s-save">Guardar</button>
+        </div>
+
+        <div class="card form">
+          <h3>Pagos fijos</h3>
+          <ul class="simple-list" id="s-bills"></ul>
+          <button type="button" class="ghost" data-add="bill">＋ Agregar pago fijo</button>
+        </div>
+
+        <div class="card form">
+          <h3>Tarjetas de crédito</h3>
+          <ul class="simple-list" id="s-cards"></ul>
+          <button type="button" class="ghost" data-add="card">＋ Agregar tarjeta</button>
+        </div>
+
+        <div class="card form">
+          <h3>Respaldo</h3>
+          <p class="muted small">Copia extra de tus datos en un archivo, por si acaso.</p>
+          <button type="button" id="export-btn">Descargar respaldo (.json)</button>
+          <label class="file-btn">
+            Restaurar respaldo
+            <input id="import-input" type="file" accept="application/json,.json" hidden>
+          </label>
+          <button type="button" id="export-csv-btn">Exportar a CSV (Excel)</button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar">
+      <button type="button" data-goto="home" class="active"><span aria-hidden="true">🏡</span>Inicio</button>
+      <button type="button" data-goto="moves"><span aria-hidden="true">📋</span>Movimientos</button>
+      <button type="button" data-goto="cards"><span aria-hidden="true">💳</span>Tarjetas</button>
+      <button type="button" data-goto="settings"><span aria-hidden="true">⚙️</span>Ajustes</button>
+    </nav>
+  </div>
+
+  <!-- Nuevo / editar movimiento -->
+  <dialog id="move-dialog" class="sheet">
+    <form id="move-form" class="form" method="dialog" autocomplete="off">
+      <div class="segmented" id="m-type">
+        <button type="button" data-type="gasto">Gasto</button>
+        <button type="button" data-type="ingreso">Ingreso</button>
+      </div>
+      <div class="amount-row">
+        <button type="button" id="m-currency" class="currency" title="Tocar para cambiar a dólares">Q</button>
+        <input id="m-amount" type="text" inputmode="decimal" placeholder="0.00" aria-label="Monto">
+      </div>
+      <p id="m-conversion" class="hint" hidden></p>
+      <input id="m-desc" type="text" list="desc-suggestions" aria-label="Descripción">
+      <datalist id="desc-suggestions"></datalist>
+      <div class="field" id="m-cat-field">
+        <span>Categoría</span>
+        <div class="chips" id="m-category" role="radiogroup"></div>
+      </div>
+      <div class="field" id="m-method-field">
+        <span>¿Con qué pagaste?</span>
+        <div class="chips" id="m-method" role="radiogroup"></div>
+      </div>
+      <label class="date-row">
+        <span>Fecha</span>
+        <input id="m-date" type="date">
+      </label>
+      <div class="dialog-actions">
+        <button type="button" id="m-delete" class="danger">Eliminar</button>
+        <span class="spacer"></span>
+        <button type="button" id="m-cancel">Cancelar</button>
+        <button type="submit" class="primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Pago fijo -->
+  <dialog id="bill-dialog" class="sheet">
+    <form id="bill-form" class="form" method="dialog" autocomplete="off">
+      <h3 id="bill-title">Pago fijo</h3>
+      <div class="field">
+        <span>Ícono</span>
+        <div class="chips emoji-chips" id="b-emoji" role="radiogroup"></div>
+      </div>
+      <label class="field">
+        <span>Nombre</span>
+        <input id="b-name" type="text" maxlength="30" placeholder="Ej. Alquiler">
+      </label>
+      <div class="two-cols">
+        <label class="field">
+          <span>Monto (Q)</span>
+          <input id="b-amount" type="text" inputmode="decimal" placeholder="0.00">
+        </label>
+        <label class="field">
+          <span>Día del mes</span>
+          <input id="b-day" type="number" min="1" max="31" inputmode="numeric" placeholder="1–31">
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="b-delete" class="danger">Eliminar</button>
+        <span class="spacer"></span>
+        <button type="button" id="b-cancel">Cancelar</button>
+        <button type="submit" class="primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Tarjeta -->
+  <dialog id="card-dialog" class="sheet">
+    <form id="card-form" class="form" method="dialog" autocomplete="off">
+      <h3 id="card-title">Tarjeta</h3>
+      <label class="field">
+        <span>Nombre</span>
+        <input id="c-name" type="text" maxlength="30" placeholder="Ej. Visa BI">
+      </label>
+      <div class="field">
+        <span>Color</span>
+        <div class="swatches" id="c-colors" role="radiogroup"></div>
+      </div>
+      <div class="two-cols">
+        <label class="field">
+          <span>Día de corte</span>
+          <input id="c-corte" type="number" min="1" max="31" inputmode="numeric">
+        </label>
+        <label class="field">
+          <span>Día de pago</span>
+          <input id="c-pago" type="number" min="1" max="31" inputmode="numeric">
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" id="c-delete" class="danger">Eliminar</button>
+        <span class="spacer"></span>
+        <button type="button" id="c-cancel">Cancelar</button>
+        <button type="submit" class="primary">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="app.js"></script>
+  <script type="module" src="sync.js" onerror="App.setCloudUnavailable()"></script>
+</body>
+</html>
